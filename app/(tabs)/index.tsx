@@ -1,195 +1,273 @@
 import React, { useState } from 'react';
-import { StyleSheet, Button, View, Image } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { Picker } from '@react-native-picker/picker';
-import ParallaxScrollView from '@/components/parallax-scroll-view'; // Import lại ParallaxScrollView
-import { ThemedView } from '@/components/themed-view';
+import {
+  SafeAreaView,
+  StyleSheet,
+  View,
+  Text,
+  Button,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
 
-// Tải dữ liệu gợi ý từ file JSON
-const suggestionsData = require('@/assets/data/suggestions.json');
+// --- Dữ liệu Gợi ý (Copy từ Bước 1 vào đây) ---
+const suggestionsData = {
+  "Vui": {
+    "Nắng": ["Ra ngoài dạo phố hoặc chụp vài bức ảnh", "Đi ăn kem cùng bạn bè!", "Chơi thể thao ngoài trời (ví dụ: đá bóng, cầu lông)"],
+    "Mưa": ["Nghe một playlist nhạc vui vẻ và nhảy theo", "Xem một bộ phim hài sảng khoái", "Rủ bạn bè chơi board game hoặc game online"],
+    "Mát / Mây": ["Đi dạo công viên và tận hưởng không khí", "Tổ chức một buổi picnic nhỏ ở ban công hoặc sân thượng", "Đọc một cuốn sách hay bên cửa sổ"]
+  },
+  "Buồn": {
+    "Nắng": ["Đi dạo nhẹ nhàng ở nơi có nhiều cây xanh", "Nghe một podcast chữa lành (healing)", "Viết nhật ký ở một quán cà phê yên tĩnh"],
+    "Mưa": ["Nghe nhạc lo-fi và pha tách trà nóng", "Xem một bộ phim sâu lắng hoặc hợp tâm trạng", "Ngâm mình trong bồn nước ấm với tinh dầu"],
+    "Mát / Mây": ["Ngồi ở ban công, hít thở sâu và ngắm mây trời", "Đi dạo bộ ở một nơi vắng vẻ, yên tĩnh", "Thử tập yoga hoặc thiền để thư giãn tâm trí"]
+  },
+  "Chán": {
+    "Nắng": ["Thử đi một con đường mới chưa bao giờ đi", "Đến nhà sách và chọn một cuốn sách ngẫu nhiên", "Tập thể dục cường độ cao để giải phóng năng lượng"],
+    "Mưa": ["Sắp xếp lại phòng ốc hoặc dọn dẹp nhà cửa", "Học một kỹ năng online mới (ví dụ: một công thức nấu ăn, một mẹo vặt)", "Viết ra 3 điều bạn muốn làm trong tuần tới"],
+    "Mát / Mây": ["Đi dạo không mục đích và quan sát mọi thứ xung quanh", "Lên kế hoạch cho một chuyến đi ngắn ngày", "Tìm hiểu về một chủ đề mới lạ trên internet"]
+  }
+};
 
-// Định nghĩa kiểu dữ liệu cho suggestions
-type SuggestionsMap = Record<string, Record<string, string[]>>;
+const moods = ["Vui", "Buồn", "Chán"]; //
+const weathers = ["Nắng", "Mưa", "Mát / Mây"]; //
+// --------------------------------------------------
 
-// Các lựa chọn cố định cho dropdown
-const moods = ['Vui', 'Buồn', 'Chán'];
-const weathers = ['Nắng', 'Mưa', 'Mát / Mây'];
+const App = () => {
+  // --- State (Trạng thái) ---
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [selectedWeather, setSelectedWeather] = useState(null);
+  const [currentSuggestion, setCurrentSuggestion] = useState("");
+  // Lưu index của gợi ý trước đó để tránh lặp lại
+  const [lastSuggestionIndex, setLastSuggestionIndex] = useState(-1);
 
-export default function HomeScreen() {
-  // State để lưu lựa chọn của người dùng
-  const [selectedMood, setSelectedMood] = useState(moods[0]);
-  const [selectedWeather, setSelectedWeather] = useState(weathers[0]);
-  
-  // State để lưu kết quả gợi ý
-  const [currentSuggestion, setCurrentSuggestion] = useState('');
-  const [currentList, setCurrentList] = useState<string[]>([]);
-  const [showResult, setShowResult] = useState(false);
+  // --- Hàm trợ giúp (Helpers) ---
 
-  const suggestions: SuggestionsMap = suggestionsData;
+  /**
+   * Hàm này tạo ra một nhóm các nút radio (dùng TouchableOpacity)
+   *
+   */
+  const renderRadioButtons = (options, selectedValue, onSelect) => {
+    return options.map((option) => (
+      <TouchableOpacity
+        key={option}
+        style={[
+          styles.radioButton,
+          selectedValue === option && styles.radioButtonSelected,
+        ]}
+        onPress={() => onSelect(option)}>
+        <Text
+          style={[
+            styles.radioText,
+            selectedValue === option && styles.radioTextSelected,
+          ]}>
+          {option}
+        </Text>
+      </TouchableOpacity>
+    ));
+  };
 
-  // Xử lý khi nhấn nút "Gợi ý cho tôi"
-  const generateSuggestion = () => {
-    // Kết hợp (Tâm trạng + Thời tiết) để lấy danh sách gợi ý
-    const list = suggestions[selectedMood]?.[selectedWeather] || [];
-    
-    if (list.length === 0) {
-      setCurrentSuggestion('Không tìm thấy gợi ý phù hợp.');
-      setCurrentList([]);
-      setShowResult(true);
+  // --- Hàm xử lý logic chính ---
+
+  /**
+   * Xử lý khi nhấn nút "Gợi ý cho tôi"
+   *
+   */
+  const handleGetSuggestion = () => {
+    if (!selectedMood || !selectedWeather) {
+      alert('Vui lòng chọn tâm trạng và thời tiết!');
       return;
     }
+
+    // Lấy danh sách gợi ý dựa trên lựa chọn
+    const suggestionList = suggestionsData[selectedMood][selectedWeather];
 
     // Chọn ngẫu nhiên 1 gợi ý
-    const randomIndex = Math.floor(Math.random() * list.length);
-    const suggestion = list[randomIndex];
+    const randomIndex = Math.floor(Math.random() * suggestionList.length);
 
-    setCurrentList(list); // Lưu lại danh sách hiện tại để dùng cho "Gợi ý khác"
-    setCurrentSuggestion(suggestion); // Hiển thị gợi ý
-    setShowResult(true); // Hiển thị khu vực kết quả và nút "Gợi ý khác"
+    // Hiển thị gợi ý
+    setCurrentSuggestion(suggestionList[randomIndex]);
+    // Lưu lại index đã chọn
+    setLastSuggestionIndex(randomIndex);
   };
 
-  // Xử lý khi nhấn nút "Gợi ý khác"
-  const generateAnotherSuggestion = () => {
-    if (currentList.length === 0) {
-      generateSuggestion();
+  /**
+   * Xử lý khi nhấn nút "Gợi ý khác"
+   *
+   */
+  const handleGetAnotherSuggestion = () => {
+    if (!selectedMood || !selectedWeather) {
+      alert('Vui lòng chọn tâm trạng và thời tiết trước.');
+      return;
+    }
+    
+    // Nếu chưa có gợi ý nào, hãy chạy chức năng "Gợi ý cho tôi"
+    if (!currentSuggestion) {
+      handleGetSuggestion();
       return;
     }
 
-    if (currentList.length === 1) {
-      setCurrentSuggestion(currentList[0]);
+    const suggestionList = suggestionsData[selectedMood][selectedWeather];
+
+    // Xử lý trường hợp danh sách chỉ có 1 gợi ý
+    if (suggestionList.length <= 1) {
+      // Không thể chọn cái khác, chỉ cần hiển thị lại
+      setCurrentSuggestion(suggestionList[0]);
+      setLastSuggestionIndex(0);
       return;
     }
 
-    let newSuggestion = currentSuggestion;
-    // Lặp để đảm bảo không lặp lại gợi ý trước đó
+    // Tìm một index mới khác với index trước đó
+    let newIndex;
     do {
-      const randomIndex = Math.floor(Math.random() * currentList.length);
-      newSuggestion = currentList[randomIndex];
-    } while (newSuggestion === currentSuggestion);
+      newIndex = Math.floor(Math.random() * suggestionList.length);
+    } while (newIndex === lastSuggestionIndex);
 
-    setCurrentSuggestion(newSuggestion); // Hiển thị gợi ý khác
+    // Hiển thị gợi ý mới
+    setCurrentSuggestion(suggestionList[newIndex]);
+    // Cập nhật lại index
+    setLastSuggestionIndex(newIndex);
   };
 
+  // --- Giao diện (Render) ---
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      
-      {/* Tiêu đề */}
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title" style={styles.title}>
-          Gợi ý theo tâm trạng & thời tiết
-        </ThemedText>
-      </ThemedView>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Tiêu đề */}
+        <Text style={styles.title}>Gợi ý theo tâm trạng & thời tiết</Text>
 
-      {/* Lựa chọn tâm trạng */}
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText style={styles.label}>Tâm trạng hiện tại:</ThemedText>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedMood}
-            onValueChange={(itemValue) => setSelectedMood(itemValue)}
-            style={styles.picker}>
-            {moods.map((mood) => (
-              <Picker.Item key={mood} label={mood} value={mood} />
-            ))}
-          </Picker>
+        {/* Lựa chọn Tâm trạng */}
+        <Text style={styles.label}>Tâm trạng của bạn:</Text>
+        <View style={styles.radioGroup}>
+          {renderRadioButtons(moods, selectedMood, setSelectedMood)}
         </View>
-      </ThemedView>
 
-      {/* Lựa chọn thời tiết */}
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText style={styles.label}>Thời tiết hiện tại:</ThemedText>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedWeather}
-            onValueChange={(itemValue) => setSelectedWeather(itemValue)}
-            style={styles.picker}>
-            {weathers.map((weather) => (
-              <Picker.Item key={weather} label={weather} value={weather} />
-            ))}
-          </Picker>
+        {/* Lựa chọn Thời tiết */}
+        <Text style={styles.label}>Thời tiết hôm nay:</Text>
+        <View style={styles.radioGroup}>
+          {renderRadioButtons(weathers, selectedWeather, setSelectedWeather)}
         </View>
-      </ThemedView>
 
-      {/* Nút "Gợi ý cho tôi" */}
-      <ThemedView style={styles.stepContainer}>
-        <Button title="Gợi ý cho tôi" onPress={generateSuggestion} />
-      </ThemedView>
+        {/* Nút hành động */}
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Gợi ý cho tôi" //
+            onPress={handleGetSuggestion}
+          />
+          <View style={styles.buttonSpacer} />
+          <Button
+            title="Gợi ý khác" //
+            onPress={handleGetAnotherSuggestion}
+            color="#6c757d" // Màu xám cho nút phụ
+          />
+        </View>
 
-      {/* Khu vực kết quả (hiển thị có điều kiện) */}
-      {showResult && (
-        <>
-          {/* Hiển thị gợi ý */}
-          <ThemedView style={[styles.stepContainer, styles.resultBox]}>
-            <ThemedText style={styles.resultText}>
-              {currentSuggestion}
-            </ThemedText>
-          </ThemedView>
-          
-          {/* Nút "Gợi ý khác" */}
-          <ThemedView style={styles.stepContainer}>
-            <Button title="Gợi ý khác" onPress={generateAnotherSuggestion} />
-          </ThemedView>
-        </>
-      )}
-    </ParallaxScrollView>
+        {/* Khu vực kết quả */}
+        <View style={styles.resultBox}>
+          {currentSuggestion ? (
+            <Text style={styles.resultText}>
+              💡 {currentSuggestion} {/* */}
+            </Text>
+          ) : (
+            <Text style={styles.resultPlaceholder}>
+              Hãy chọn tâm trạng và thời tiết để nhận gợi ý...
+            </Text>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
-// StyleSheet để định dạng giao diện
+// --- CSS (Styles) ---
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  title: {
-    textAlign: 'center',
-    width: '100%',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+  container: {
+    flexGrow: 1,
+    padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#fff', // Thêm màu nền để picker dễ nhìn hơn
   },
-  picker: {
-    height: 50,
-    width: '100%',
-    color: '#000', // Đảm bảo text trong picker có màu (quan trọng cho dark mode)
-  },
-  resultBox: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  resultText: {
-    fontSize: 20,
+  title: { //
+    fontSize: 26,
+    fontWeight: 'bold',
     textAlign: 'center',
-    fontStyle: 'italic',
+    marginBottom: 30,
     color: '#333',
   },
+  label: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginTop: 15,
+    marginBottom: 10,
+    color: '#495057',
+  },
+  radioGroup: { //
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  radioButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  radioButtonSelected: {
+    backgroundColor: '#007bff',
+    borderColor: '#007bff',
+  },
+  radioText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  radioTextSelected: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  buttonContainer: { //
+    marginTop: 25,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  buttonSpacer: {
+    width: 20, // Khoảng cách giữa 2 nút
+  },
+  resultBox: { //
+    marginTop: 30,
+    padding: 25,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    minHeight: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resultText: { //
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#343a40',
+    lineHeight: 28,
+  },
+  resultPlaceholder: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    color: '#888',
+  },
 });
+
+export default App;
