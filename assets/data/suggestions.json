@@ -1,0 +1,53 @@
+{
+  "Vui": {
+    "Nắng": [
+      "Ra ngoài dạo phố hoặc chụp vài bức ảnh.",
+      "Đi công viên và tận hưởng ánh nắng.",
+      "Hẹn hò bạn bè đi cà phê ngoài trời."
+    ],
+    "Mưa": [
+      "Ở nhà xem một bộ phim hài.",
+      "Rủ bạn bè chơi board game.",
+      "Đọc một cuốn sách phiêu lưu kỳ thú."
+    ],
+    "Mát / Mây": [
+      "Đi dạo quanh hồ.",
+      "Tổ chức một buổi picnic nhỏ.",
+      "Chơi thể thao như cầu lông hoặc đá cầu."
+    ]
+  },
+  "Buồn": {
+    "Nắng": [
+      "Đi bộ dưới hàng cây xanh.",
+      "Viết nhật ký ở một nơi yên tĩnh.",
+      "Nghe nhạc nhẹ và tắm nắng."
+    ],
+    "Mưa": [
+      "Nghe nhạc lo-fi và pha tách trà nóng.",
+      "Viết vài dòng nhật ký.",
+      "Nấu một món ăn ấm áp."
+    ],
+    "Mát / Mây": [
+      "Ngồi ở ban công và hít thở không khí trong lành.",
+      "Vẽ một bức tranh.",
+      "Nghe podcast về phát triển bản thân."
+    ]
+  },
+  "Chán": {
+    "Nắng": [
+      "Thử một quán cà phê mới.",
+      "Đi xe đạp quanh khu phố.",
+      "Học một kỹ năng mới ngoài trời, ví dụ như trượt ván."
+    ],
+    "Mưa": [
+      "Dọn dẹp lại phòng ốc, sắp xếp lại đồ đạc.",
+      "Học một khóa học online ngắn.",
+      "Thử làm đồ thủ công (DIY)."
+    ],
+    "Mát / Mây": [
+      "Đi nhà sách và chọn một cuốn sách ngẫu nhiên.",
+      "Chạy bộ chậm trong công viên.",
+      "Thử ghé thăm một bảo tàng hoặc triển lãm."
+    ]
+  }
+}
